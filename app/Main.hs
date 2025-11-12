@@ -21,6 +21,16 @@ import           RandController
 data Tick = Tick
 type Name = ()
 
+--
+-- Modify these definitions to define the controllers
+-- used for the blue and gold teams, respectively
+--
+blueController = mkRandController
+goldController = mkRandController
+--
+--
+--
+
 app :: (BotController b, BotController g) => App (Game b g) Tick Name
 app = App
   { appDraw = drawUI
@@ -41,7 +51,7 @@ main = do
   case field of
     Left err -> putStrLn err
     Right field -> do
-      let game = mkGame mkRandController mkRandController field
+      let game = mkGame blueController goldController field
       let buildVty = VCP.mkVty V.defaultConfig
       initialVty <- buildVty
       _ <- customMain initialVty buildVty (Just chan) app game

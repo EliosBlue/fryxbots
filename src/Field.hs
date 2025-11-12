@@ -206,8 +206,8 @@ stepBlueBot field bot =
     DestroyBeacon ->  let currentPos = lookupBotPos field' botId
                           beacons' = Map.delete currentPos (beacons field)
                       in field' { beacons = beacons' }
-    PickUpArtifact -> field'
-    DropArtifact -> field'
+    PickUpFossil -> field'
+    DropFossil -> field'
 
 stepGoldBot :: (BotController b, BotController g) => Field b g -> Fryxbot g -> Field b g
 stepGoldBot field bot =
@@ -231,8 +231,8 @@ stepGoldBot field bot =
     DestroyBeacon ->  let currentPos = lookupBotPos field' botId
                           beacons' = Map.delete currentPos (beacons field)
                       in field' { beacons = beacons' }
-    PickUpArtifact -> field'
-    DropArtifact -> field'
+    PickUpFossil -> field'
+    DropFossil -> field'
 
 cellKind :: (BotController b, BotController g) => Field b g -> Pos -> CellKind
 cellKind field pos =

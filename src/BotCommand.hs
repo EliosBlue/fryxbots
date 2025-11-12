@@ -8,5 +8,5 @@ data BotCommand = Idle
                 | MoveForward
                 | DropBeacon Int
                 | DestroyBeacon
-                | PickUpArtifact
-                | DropArtifact
+                | PickUpFossil
+                | DropFossil

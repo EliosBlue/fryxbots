@@ -18,6 +18,8 @@ data Fryxbot c where
   Fryxbot :: forall c. BotController c =>
              { id :: Int
              , facing :: BotFacing
+             -- This will be implemented soon!
+             -- , sensing :: BotSensing
              , state :: BotState
              , team :: Team
              , controller :: c
