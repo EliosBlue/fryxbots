@@ -3,7 +3,7 @@ module RandController
   , mkRandController
   ) where
 
-import FryxbotSimulator
+import FryxbotWars
 import System.Random
 
 data RandController = RandController { botId :: Int

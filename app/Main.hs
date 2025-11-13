@@ -13,7 +13,7 @@ import           Control.Monad (forever, void)
 import           Data.Char (intToDigit)
 import           Data.Text (pack)
 import           FieldParser
-import           FryxbotSimulator
+import           FryxbotWars
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty.Attributes.Color as VC
 import qualified Graphics.Vty.CrossPlatform as VCP
