@@ -7,10 +7,13 @@ module Game
   , mkGame
   ) where
 
+import           Beacon (mkBeacon, BeaconKind)
 import           BotCommand
 import           BotController (BotController(..))
 import           BotFacing
 import           BotState
+import           Data.Map (Map)
+import qualified Data.Map as Map
 import           Field (Field)
 import qualified Field as Field
 import           Fryxbot (Fryxbot)
@@ -54,5 +57,65 @@ executeRound :: (BotController b, BotController g) => Game b g -> Game b g
 executeRound game =
   let blueBots = (Field.getBlueBots . field) game
       goldBots = (Field.getGoldBots . field) game
-      game' = game { field = foldl Field.stepBlueBot (field game) blueBots }
-  in game' { field = foldl Field.stepGoldBot (field game') goldBots }
+      afterBlueMoves = foldl stepBlueBot (field game) blueBots
+      afterGoldMoves = foldl stepGoldBot afterBlueMoves goldBots
+  in game { field = afterGoldMoves }
+
+stepBlueBot :: (BotController b, BotController g) => Field b g -> Fryxbot b -> Field b g
+stepBlueBot field bot =
+  let botId  = Bot.id bot
+      bot'   = Bot.invokeController bot
+      field' = Field.updateBlueBot field bot'
+  in case (command . Bot.state) bot' of
+    Idle        -> field'
+    RotateLeft  -> Field.updateBlueBot field' $
+                     bot' { Bot.facing = rotateLeft $ Bot.facing bot' }
+    RotateRight -> Field.updateBlueBot field' $
+                     bot' { Bot.facing = rotateRight $ Bot.facing bot' }
+    MoveForward -> moveBotForward field' bot'
+    DropBeacon kind -> dropBeacon field' bot' kind
+    DestroyBeacon -> destroyBeacon field' bot'
+    PickUpFossil -> field'
+    DropFossil -> field'
+
+stepGoldBot :: (BotController b, BotController g) => Field b g -> Fryxbot g -> Field b g
+stepGoldBot field bot =
+  let botId  = Bot.id bot
+      bot'   = Bot.invokeController bot
+      field' = Field.updateGoldBot field bot'
+  in case (command . Bot.state) bot' of
+    Idle        -> field'
+    RotateLeft  -> Field.updateGoldBot field' $
+                     bot' { Bot.facing = rotateLeft $ Bot.facing bot' }
+    RotateRight -> Field.updateGoldBot field' $
+                     bot' { Bot.facing = rotateRight $ Bot.facing bot' }
+    MoveForward -> moveBotForward field' bot'
+    DropBeacon kind -> dropBeacon field' bot' kind
+    DestroyBeacon -> destroyBeacon field' bot'
+    PickUpFossil -> field'
+    DropFossil -> field'
+
+
+moveBotForward :: (BotController b, BotController g) => Field b g -> Fryxbot x -> Field b g
+moveBotForward field bot =
+  let botId  = Bot.id bot
+      botPos = Field.lookupBotPos field botId
+      newPos = adjacent (Bot.facing bot) botPos
+  in if Field.isBlocked field newPos
+       then field
+       else Field.setBotPos field botId newPos
+
+dropBeacon :: (BotController b, BotController g) =>
+               Field b g -> Fryxbot x -> BeaconKind -> Field b g
+dropBeacon field bot kind =
+  let botPos   = Field.lookupBotPos field (Bot.id bot)
+      team     = Bot.team bot
+      beacons' = Map.insert botPos (mkBeacon team kind) (Field.beacons field)
+  in field { Field.beacons = beacons' }
+
+destroyBeacon :: (BotController b, BotController g) =>
+               Field b g -> Fryxbot x -> Field b g
+destroyBeacon field bot =
+  let botPos   = Field.lookupBotPos field (Bot.id bot)
+      beacons' = Map.delete botPos (Field.beacons field)
+   in field { Field.beacons = beacons' }

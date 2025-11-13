@@ -10,6 +10,7 @@ module Field
   , cellKind
   , getBlueBots
   , getGoldBots
+  , isBlocked
   , isBlueBase
   , isGoldBase
   , lookupBotPos
@@ -19,8 +20,6 @@ module Field
   , setBuilding
   , setFossils
   , setGoldBase
-  , stepBlueBot
-  , stepGoldBot
   , showField
   , updateBlueBot
   , updateGoldBot
@@ -78,8 +77,8 @@ data CellKind = Building
               | GoldBase
               | BlueBot BotFacing
               | GoldBot BotFacing
-              | BlueBeacon Int
-              | GoldBeacon Int
+              | BlueBeacon BeaconKind
+              | GoldBeacon BeaconKind
               | Fossils Int
               | Open
 
@@ -183,56 +182,6 @@ setBotPos field botId pos =
       { botsByPosition = Map.insert pos botId $ Map.delete oldPos $ botsByPosition field
       , positionsByBot = Map.insert botId pos $ Map.delete botId $ positionsByBot field
       }
-
-stepBlueBot :: (BotController b, BotController g) => Field b g -> Fryxbot b -> Field b g
-stepBlueBot field bot =
-  let botId = Bot.id bot
-      bot' = Bot.invokeController bot
-      field' = updateBlueBot field bot'
-  in case (command . Bot.state) bot' of
-    Idle        -> field'
-    RotateLeft  -> updateBlueBot field' $
-                     bot' { Bot.facing = rotateLeft $ Bot.facing bot' }
-    RotateRight -> updateBlueBot field' $
-                     bot' { Bot.facing = rotateRight $ Bot.facing bot' }
-    MoveForward -> let currentPos = lookupBotPos field' botId
-                       newPos = adjacent (Bot.facing bot') currentPos
-                   in if isBlocked field newPos
-                      then field'
-                      else setBotPos field' botId newPos
-    DropBeacon i -> let currentPos = lookupBotPos field' botId
-                        beacons' = Map.insert currentPos (mkBeacon Blue i) (beacons field)
-                    in field' { beacons = beacons' }
-    DestroyBeacon ->  let currentPos = lookupBotPos field' botId
-                          beacons' = Map.delete currentPos (beacons field)
-                      in field' { beacons = beacons' }
-    PickUpFossil -> field'
-    DropFossil -> field'
-
-stepGoldBot :: (BotController b, BotController g) => Field b g -> Fryxbot g -> Field b g
-stepGoldBot field bot =
-  let botId = Bot.id bot
-      bot' = (Bot.invokeController bot)
-      field' = Field.updateGoldBot field bot'
-  in case (command . Bot.state) bot' of
-    Idle        -> field'
-    RotateLeft  -> updateGoldBot field' $
-                     bot' { Bot.facing = rotateLeft $ Bot.facing bot' }
-    RotateRight -> updateGoldBot field' $
-                     bot' { Bot.facing = rotateRight $ Bot.facing bot' }
-    MoveForward -> let currentPos = Field.lookupBotPos field' botId
-                       newPos = adjacent (Bot.facing bot') currentPos
-                   in if isBlocked field newPos
-                      then field'
-                      else setBotPos field' botId newPos
-    DropBeacon i -> let currentPos = lookupBotPos field' botId
-                        beacons' = Map.insert currentPos (mkBeacon Gold i) (beacons field)
-                    in field' { beacons = beacons' }
-    DestroyBeacon ->  let currentPos = lookupBotPos field' botId
-                          beacons' = Map.delete currentPos (beacons field)
-                      in field' { beacons = beacons' }
-    PickUpFossil -> field'
-    DropFossil -> field'
 
 cellKind :: (BotController b, BotController g) => Field b g -> Pos -> CellKind
 cellKind field pos =

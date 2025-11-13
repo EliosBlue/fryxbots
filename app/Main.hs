@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import           Beacon
 import           Brick
 import           Brick.BChan (newBChan, writeBChan)
 import qualified Brick.Widgets.Border as B
@@ -92,25 +93,20 @@ drawGrid game = withBorderStyle BS.unicodeBold
                       Building -> withAttr (attrName "wallColor") (str "# ")
                       BlueBase -> withAttr (attrName "blueBase") (str "b ")
                       GoldBase -> withAttr (attrName "goldBase") (str "g ")
-                      BlueBeacon i -> withAttr (attrName "blueBeacon") (intToSmall i)
-                      GoldBeacon i -> withAttr (attrName "goldBeacon") (intToSmall i)
-                      Fossils i -> withAttr (attrName "cyan") (intToStr i)
+                      BlueBeacon kind -> withAttr (attrName "blueBeacon") (drawBeacon kind)
+                      GoldBeacon kind -> withAttr (attrName "goldBeacon") (drawBeacon kind)
+                      Fossils i -> withAttr (attrName "cyan")
+                                   (str $ if i <= 9 then (intToDigit i):" " else "* ")
                       BlueBot facing -> withAttr (attrName "blueBot") (str $ faceStr facing)
                       GoldBot facing -> withAttr (attrName "goldBot") (str $ faceStr facing)
                       Open -> withAttr (attrName "gray") (str ". ")
-        where intToStr i = (str $ if i <= 9 then (intToDigit i):" " else "* ")
-              intToSmall i = str $ case i of
-                               0 -> "⁰ "
-                               1 -> "¹ "
-                               2 -> "² "
-                               3 -> "³ "
-                               4 -> "⁴ "
-                               5 -> "⁵ "
-                               6 -> "⁶ "
-                               7 -> "⁷ "
-                               8 -> "⁸ "
-                               9 -> "⁹ "
-                               _ -> "⁺ "
+        where drawBeacon kind = str $ case kind of
+                  Kind1 -> "¹ "
+                  Kind2 -> "² "
+                  Kind3 -> "³ "
+                  Kind4 -> "⁴ "
+                  Kind5 -> "⁵ "
+                  Kind6 -> "⁶ "
 
 theMap :: AttrMap
 theMap = attrMap V.defAttr

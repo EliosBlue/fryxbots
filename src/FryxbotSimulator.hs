@@ -1,5 +1,7 @@
 module FryxbotSimulator
-  ( BotController(..)
+  ( Beacon(..)
+  , BeaconKind(..)
+  , BotController(..)
   , BotCommand(..)
   , BotFacing(..)
   , BotState
@@ -15,6 +17,7 @@ module FryxbotSimulator
   , setCommand
   ) where
 
+import Beacon
 import BotController
 import BotCommand
 import BotFacing
