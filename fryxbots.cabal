@@ -35,6 +35,7 @@ library
       Fryxbots.FieldParser
       Fryxbots.Game
       Fryxbots.Pos
+      Fryxbots.Simulator
       Fryxbots.Team
   other-modules:
       Paths_fryxbots
