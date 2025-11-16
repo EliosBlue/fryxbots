@@ -1,22 +1,22 @@
-module BotSensing
-  ( BotSensing(..)
+module Fryxbots.Bot.Sensing
+  ( Sensing(..)
   , HexScan(..)
   , emptyScan
   , emptySensing
   ) where
 
-import           Beacon
-import           BotFacing (BotFacing)
-import qualified BotFacing as Facing
-import           Team
+import           Fryxbots.Beacon
+import           Fryxbots.Bot.Facing (Facing)
+import qualified Fryxbots.Bot.Facing as Facing
+import           Fryxbots.Team
 
-data BotSensing = BotSensing
+data Sensing = Sensing
   { current :: HexScan
-  , adjacent :: BotFacing -> HexScan
+  , adjacent :: Facing -> HexScan
   }
 
-emptySensing :: BotSensing
-emptySensing = BotSensing
+emptySensing :: Sensing
+emptySensing = Sensing
   { current = emptyScan
   , adjacent = \_ -> emptyScan
   }

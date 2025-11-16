@@ -1,27 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FieldParser
+module Fryxbots.FieldParser
   ( parseField
   ) where
 
 import           Data.Char (digitToInt, isDigit)
 import           Data.Text (Text)
 import           Data.Void
-import           Field
-import qualified Pos as Pos
+import           Fryxbots.Bot.Controller
+import           Fryxbots.Field
+import qualified Fryxbots.Pos as Pos
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser = Parsec Void Text
 
-parseField :: (BotController b, BotController g) => Text -> IO (Either String (Field b g))
+parseField :: (Controller b, Controller g) => Text -> IO (Either String (Field b g))
 parseField fieldStr = do
   case parse fieldParser "" fieldStr of
     Left bundle -> return $ Left (errorBundlePretty bundle)
     Right field -> return $ Right field
 
-fieldParser :: (BotController b, BotController g) => Parser (Field b g)
+fieldParser :: (Controller b, Controller g) => Parser (Field b g)
 fieldParser = do
   width <- parseInt
   space1
@@ -35,7 +36,7 @@ fieldParser = do
         (zip [0..] itemRow))
     (mkField width height) (zip [0..] items)
 
-handleCellKind :: (BotController b, BotController g) => Field b g -> Int -> Int -> CellKind -> Field b g
+handleCellKind :: (Controller b, Controller g) => Field b g -> Int -> Int -> CellKind -> Field b g
 handleCellKind field row col item =
   let pos = Pos.mkPos col row
   in case item of

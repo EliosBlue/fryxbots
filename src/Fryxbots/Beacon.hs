@@ -1,10 +1,10 @@
-module Beacon
+module Fryxbots.Beacon
   ( Beacon(..)
   , BeaconKind(..)
   , mkBeacon
   ) where
 
-import Team
+import Fryxbots.Team
 
 data Beacon = Beacon
   { team :: Team

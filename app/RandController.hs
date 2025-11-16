@@ -3,7 +3,11 @@ module RandController
   , mkRandController
   ) where
 
-import FryxbotWars
+import Fryxbots.Beacon (BeaconKind(..))
+import Fryxbots.Bot.Command
+import Fryxbots.Bot.Controller
+import Fryxbots.Bot.Facing
+import Fryxbots.Bot.State
 import System.Random
 
 data RandController = RandController { botId :: Int
@@ -12,7 +16,7 @@ data RandController = RandController { botId :: Int
 mkRandController :: RandController
 mkRandController = RandController { botId = 0, rndList = [] }
 
-instance BotController RandController where
+instance Controller RandController where
 
   initialize rc botId _ = rc { botId = botId
                              , rndList = randomRs (0,5) (mkStdGen botId) }

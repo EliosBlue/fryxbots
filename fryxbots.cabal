@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.38.1.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -24,19 +24,18 @@ source-repository head
 
 library
   exposed-modules:
-      Beacon
-      BotCommand
-      BotController
-      BotFacing
-      BotSensing
-      BotState
-      Field
-      FieldParser
-      Fryxbot
-      FryxbotWars
-      Game
-      Pos
-      Team
+      Fryxbots.Beacon
+      Fryxbots.Bot
+      Fryxbots.Bot.Command
+      Fryxbots.Bot.Controller
+      Fryxbots.Bot.Facing
+      Fryxbots.Bot.Sensing
+      Fryxbots.Bot.State
+      Fryxbots.Field
+      Fryxbots.FieldParser
+      Fryxbots.Game
+      Fryxbots.Pos
+      Fryxbots.Team
   other-modules:
       Paths_fryxbots
   autogen-modules:

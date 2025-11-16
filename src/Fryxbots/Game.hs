@@ -1,39 +1,39 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Game
+module Fryxbots.Game
   ( Game(..)
   , executeRound
   , mkGame
   ) where
 
-import           Beacon (mkBeacon, BeaconKind)
-import           BotCommand
-import           BotController (BotController(..))
-import           BotFacing
-import           BotSensing (BotSensing)
-import qualified BotSensing as Sense
-import           BotState
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Field (Field)
-import qualified Field as Field
-import           Fryxbot (Fryxbot)
-import qualified Fryxbot as Bot
-import           Pos
-import           Team
+import           Fryxbots.Beacon (mkBeacon, BeaconKind)
+import           Fryxbots.Bot (Bot)
+import qualified Fryxbots.Bot as Bot
+import           Fryxbots.Bot.Command
+import           Fryxbots.Bot.Controller (Controller(..))
+import           Fryxbots.Bot.Facing
+import           Fryxbots.Field (Field)
+import qualified Fryxbots.Field as Field
+import           Fryxbots.Bot.Sensing (Sensing)
+import qualified Fryxbots.Bot.Sensing as Sense
+import           Fryxbots.Bot.State
+import           Fryxbots.Pos
+import           Fryxbots.Team
 
 data Game b g where
-    Game :: forall b g. (BotController b, BotController g) =>
+    Game :: forall b g. (Controller b, Controller g) =>
             { field :: Field b g
             } -> Game b g
 
-mkGame :: (BotController b, BotController g) => b -> g -> Field b g -> Game b g
+mkGame :: (Controller b, Controller g) => b -> g -> Field b g -> Game b g
 mkGame blueCont goldCont field = Game {
   field = populateBots blueCont goldCont field
 }
 
-botPlacements :: (BotController b, BotController g) => Field b g -> ([Pos], [Pos])
+botPlacements :: (Controller b, Controller g) => Field b g -> ([Pos], [Pos])
 botPlacements field = foldl addPos ([], []) allPos
   where
     allPos = [mkPos x y | x <- [0..Field.width field], y <- [0..Field.height field]]
@@ -42,7 +42,7 @@ botPlacements field = foldl addPos ([], []) allPos
       else if Field.isGoldBase field pos then (bs, pos:gs)
       else (bs, gs)
 
-populateBots :: (BotController b, BotController g) => b -> g -> Field b g -> Field b g
+populateBots :: (Controller b, Controller g) => b -> g -> Field b g -> Field b g
 populateBots blueCont goldCont field =
   let (blues, golds) = botPlacements field
       idedBlues = zip [0..] blues
@@ -55,15 +55,15 @@ populateBots blueCont goldCont field =
       withBoth = foldl (\fld (botId, pos) -> addGoldBot fld botId pos) withBlues idedGolds
   in withBoth
 
-executeRound :: (BotController b, BotController g) => Game b g -> Game b g
+executeRound :: (Controller b, Controller g) => Game b g -> Game b g
 executeRound game =
   let updateField = updateSensing . removeDeadBots . stepGoldBots . stepBlueBots
   in game { field = updateField $ field game }
 
-stepBlueBots :: (BotController b, BotController g) => Field b g -> Field b g
+stepBlueBots :: (Controller b, Controller g) => Field b g -> Field b g
 stepBlueBots field = foldl step field $ Field.getBlueBots field
   where
-    step :: (BotController b, BotController g) => Field b g -> Fryxbot b -> Field b g
+    step :: (Controller b, Controller g) => Field b g -> Bot b -> Field b g
     step field bot =
         let bot'   = Bot.invokeController bot
             field' = Field.updateBlueBot field bot'
@@ -79,10 +79,10 @@ stepBlueBots field = foldl step field $ Field.getBlueBots field
              PickUpFossil -> field'
              DropFossil -> field'
 
-stepGoldBots :: (BotController b, BotController g) => Field b g -> Field b g
+stepGoldBots :: (Controller b, Controller g) => Field b g -> Field b g
 stepGoldBots field = foldl step field $ Field.getGoldBots field
   where
-    step :: (BotController b, BotController g) => Field b g -> Fryxbot g -> Field b g
+    step :: (Controller b, Controller g) => Field b g -> Bot g -> Field b g
     step field bot =
         let bot'   = Bot.invokeController bot
             field' = Field.updateGoldBot field bot'
@@ -99,7 +99,7 @@ stepGoldBots field = foldl step field $ Field.getGoldBots field
              DropFossil -> field'
 
 
-moveBotForward :: (BotController b, BotController g) => Field b g -> Fryxbot x -> Field b g
+moveBotForward :: (Controller b, Controller g) => Field b g -> Bot x -> Field b g
 moveBotForward field bot =
   let botId  = Bot.id bot
       botPos = Field.lookupBotPos field botId
@@ -108,8 +108,8 @@ moveBotForward field bot =
        then field
        else Field.setBotPos field botId newPos
 
-dropBeacon :: (BotController b, BotController g) =>
-               Field b g -> Fryxbot x -> BeaconKind -> Field b g
+dropBeacon :: (Controller b, Controller g) =>
+               Field b g -> Bot x -> BeaconKind -> Field b g
 dropBeacon field bot kind =
   let botPos   = Field.lookupBotPos field (Bot.id bot)
       team     = Bot.team bot
@@ -119,8 +119,8 @@ dropBeacon field bot kind =
        Blue -> field { Field.blueBeacons = beacons' }
        Gold -> field { Field.goldBeacons = beacons' }
 
-destroyBeacon :: (BotController b, BotController g) =>
-               Field b g -> Fryxbot x -> Field b g
+destroyBeacon :: (Controller b, Controller g) =>
+               Field b g -> Bot x -> Field b g
 destroyBeacon field bot =
   let team     = Bot.team bot
       beacons  = if team == Blue then Field.blueBeacons else Field.goldBeacons
@@ -130,13 +130,13 @@ destroyBeacon field bot =
        Blue -> field { Field.blueBeacons = beacons' }
        Gold -> field { Field.goldBeacons = beacons' }
 
-removeDeadBots :: (BotController b, BotController g) => Field b g -> Field b g
+removeDeadBots :: (Controller b, Controller g) => Field b g -> Field b g
 removeDeadBots field =
   let deadBlueIds = map (Bot.id) $ filter (isDead field) (Field.getBlueBots field)
       deadGoldIds = map (Bot.id) $ filter (isDead field) (Field.getGoldBots field)
   in foldl Field.deleteBotById field $ deadBlueIds ++ deadGoldIds
 
-isDead :: (BotController b, BotController g) => Field b g -> Fryxbot x -> Bool
+isDead :: (Controller b, Controller g) => Field b g -> Bot x -> Bool
 isDead field bot =
   let botId       = Bot.id bot
       botPos      = Field.lookupBotPos field botId
@@ -145,7 +145,7 @@ isDead field bot =
                  || Field.isGoldBase field botPos && botTeam == Blue
   in inEnemyBase
 
-updateSensing :: (BotController b, BotController g) => Field b g -> Field b g
+updateSensing :: (Controller b, Controller g) => Field b g -> Field b g
 updateSensing field =
   let updateBlueBot bot = bot { Bot.sensing = sensingForBotId field (Bot.id bot) }
       updateGoldBot bot = bot { Bot.sensing = sensingForBotId field (Bot.id bot) }
@@ -155,11 +155,11 @@ updateSensing field =
       updatedAll = foldl Field.updateGoldBot updatedBlues goldBots'
   in updatedAll
 
-sensingForBotId :: (BotController b, BotController g) =>
-                     Field b g -> Int -> BotSensing
+sensingForBotId :: (Controller b, Controller g) =>
+                     Field b g -> Int -> Sensing
 sensingForBotId field botId =
   let botPos = Field.lookupBotPos field botId
-  in Sense.BotSensing
+  in Sense.Sensing
          { Sense.current = Field.scanHex field botPos
          , Sense.adjacent = \dir -> Field.scanHex field $ adjacent dir botPos
          }

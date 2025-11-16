@@ -1,9 +1,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Field
-  ( BotController(..)
-  , CellKind(..)
+module Fryxbots.Field
+  ( CellKind(..)
   , Field(..)
   , addBlueBot
   , addGoldBot
@@ -28,10 +27,6 @@ module Field
   , updateGoldBot
   ) where
 
-import           Beacon
-import           BotController
-import           BotFacing
-import qualified BotSensing as Sense
 import           Data.Char (intToDigit)
 import           Data.List (intercalate, intersperse)
 import           Data.Map (Map)
@@ -39,17 +34,21 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromJust)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Fryxbot (Fryxbot)
-import qualified Fryxbot as Bot
-import           Pos
-import           Team
+import           Fryxbots.Beacon
+import           Fryxbots.Bot (Bot)
+import qualified Fryxbots.Bot as Bot
+import           Fryxbots.Bot.Controller
+import           Fryxbots.Bot.Facing
+import qualified Fryxbots.Bot.Sensing as Sense
+import           Fryxbots.Pos
+import           Fryxbots.Team
 
 data Field b g where
-  Field :: forall b g. (BotController b, BotController g) =>
+  Field :: forall b g. (Controller b, Controller g) =>
            { width          :: Int
            , height         :: Int
-           , blueBotsById   :: Map Int (Fryxbot b)
-           , goldBotsById   :: Map Int (Fryxbot g)
+           , blueBotsById   :: Map Int (Bot b)
+           , goldBotsById   :: Map Int (Bot g)
            , botsByPosition :: Map Pos Int
            , positionsByBot :: Map Int Pos
            , artifacts      :: Map Pos Int
@@ -60,7 +59,7 @@ data Field b g where
            , goldBeacons    :: Map Pos Beacon
            } -> Field b g
 
-mkField :: (BotController b, BotController g) => Int -> Int -> Field b g
+mkField :: (Controller b, Controller g) => Int -> Int -> Field b g
 mkField width height = Field
   { width = width
   , height = height
@@ -79,71 +78,71 @@ mkField width height = Field
 data CellKind = Building
               | BlueBase
               | GoldBase
-              | BlueBot BotFacing
-              | GoldBot BotFacing
+              | BlueBot Facing
+              | GoldBot Facing
               | BlueBeacon BeaconKind
               | GoldBeacon BeaconKind
               | Fossils Int
               | Open
 
-setBuilding :: (BotController b, BotController g) =>
+setBuilding :: (Controller b, Controller g) =>
                Field b g -> Pos -> Field b g
 setBuilding field pos = field {
   buildings = Set.insert pos $ buildings field
 }
 
-setBlueBase :: (BotController b, BotController g) =>
+setBlueBase :: (Controller b, Controller g) =>
                Field b g -> Pos -> Field b g
 setBlueBase field pos = field {
   blueBase = Set.insert pos $ blueBase field
 }
 
-setGoldBase :: (BotController b, BotController g) =>
+setGoldBase :: (Controller b, Controller g) =>
                Field b g -> Pos -> Field b g
 setGoldBase field pos = field {
   goldBase = Set.insert pos $ goldBase field
 }
 
-setFossils :: (BotController b, BotController g) =>
+setFossils :: (Controller b, Controller g) =>
               Field b g -> Pos -> Int -> Field b g
 setFossils field pos i = field {
   artifacts = Map.insert pos i $ artifacts field
 }
 
-isBlueBase :: (BotController b, BotController g) =>
+isBlueBase :: (Controller b, Controller g) =>
               Field b g -> Pos -> Bool
 isBlueBase field pos = Set.member pos $ blueBase field
 
-isGoldBase :: (BotController b, BotController g) =>
+isGoldBase :: (Controller b, Controller g) =>
               Field b g -> Pos -> Bool
 isGoldBase field pos = Set.member pos $ goldBase field
 
-isBase :: (BotController b, BotController g) =>
+isBase :: (Controller b, Controller g) =>
           Field b g -> Team -> Pos -> Bool
 isBase field team pos = case team of
                     Blue -> isBlueBase field pos
                     Gold -> isGoldBase field pos
 
-blueBeaconAt :: (BotController b, BotController g) =>
+blueBeaconAt :: (Controller b, Controller g) =>
                 Field b g -> Pos -> Maybe BeaconKind
 blueBeaconAt field pos = do
   beacon <- Map.lookup pos $ blueBeacons field
   return $ kind beacon
 
-goldBeaconAt :: (BotController b, BotController g) =>
+goldBeaconAt :: (Controller b, Controller g) =>
                 Field b g -> Pos -> Maybe BeaconKind
 goldBeaconAt field pos = do
   beacon <- Map.lookup pos $ goldBeacons field
   return $ kind beacon
 
-beaconAt :: (BotController b, BotController g) =>
+beaconAt :: (Controller b, Controller g) =>
                 Field b g -> Team -> Pos -> Maybe BeaconKind
 beaconAt field team pos = case team of
                             Blue -> blueBeaconAt field pos
                             Gold -> goldBeaconAt field pos
 
-addBlueBot :: (BotController b, BotController g) =>
-              Field b g -> Fryxbot b -> Pos -> Field b g
+addBlueBot :: (Controller b, Controller g) =>
+              Field b g -> Bot b -> Pos -> Field b g
 addBlueBot field bot pos =
   let botId = Bot.id bot
   in
@@ -155,8 +154,8 @@ addBlueBot field bot pos =
       , positionsByBot = Map.insert botId pos $ positionsByBot field
       }
 
-addGoldBot :: (BotController b, BotController g) =>
-               Field b g -> Fryxbot g -> Pos -> Field b g
+addGoldBot :: (Controller b, Controller g) =>
+               Field b g -> Bot g -> Pos -> Field b g
 addGoldBot field bot pos =
   let botId = Bot.id bot
   in
@@ -168,7 +167,7 @@ addGoldBot field bot pos =
       , positionsByBot = Map.insert botId pos $ positionsByBot field
       }
 
-deleteBlueBotById :: (BotController b, BotController g) =>
+deleteBlueBotById :: (Controller b, Controller g) =>
                       Field b g -> Int -> Field b g
 deleteBlueBotById field botId =
   let pos = lookupBotPos field botId
@@ -178,7 +177,7 @@ deleteBlueBotById field botId =
     , positionsByBot = Map.delete botId $ positionsByBot field
     }
 
-deleteGoldBotById :: (BotController b, BotController g) =>
+deleteGoldBotById :: (Controller b, Controller g) =>
                  Field b g -> Int -> Field b g
 deleteGoldBotById field botId =
   let pos = lookupBotPos field botId
@@ -188,13 +187,13 @@ deleteGoldBotById field botId =
     , positionsByBot = Map.delete botId $ positionsByBot field
     }
 
-deleteBotById :: (BotController b, BotController g) =>
+deleteBotById :: (Controller b, Controller g) =>
              Field b g -> Int -> Field b g
 deleteBotById field botId = case lookupBotTeam field botId of
       Blue -> deleteBlueBotById field botId
       Gold -> deleteGoldBotById field botId
 
-lookupBotTeam :: (BotController b, BotController g) =>
+lookupBotTeam :: (Controller b, Controller g) =>
                  Field b g -> Int -> Team
 lookupBotTeam field botId =
   case Map.lookup botId (blueBotsById field) of
@@ -203,8 +202,8 @@ lookupBotTeam field botId =
                   Just bot -> Bot.team bot
                   Nothing  -> error $ "No bot with id: " ++ (show botId)
 
-updateBlueBot :: (BotController b, BotController g) =>
-                  Field b g -> Fryxbot b -> Field b g
+updateBlueBot :: (Controller b, Controller g) =>
+                  Field b g -> Bot b -> Field b g
 updateBlueBot field bot =
   let botId = Bot.id bot
       botsMap = blueBotsById field
@@ -212,49 +211,49 @@ updateBlueBot field bot =
      then field { blueBotsById = Map.insert botId bot botsMap }
      else error $ "No bot registered with ID: " ++ show botId
 
-updateGoldBot :: (BotController b, BotController g) =>
-                  Field b g -> Fryxbot g -> Field b g
+updateGoldBot :: (Controller b, Controller g) =>
+                  Field b g -> Bot g -> Field b g
 updateGoldBot field bot =
   let botId = Bot.id bot
   in case Map.lookup botId (goldBotsById field) of
     Nothing  -> error $ "No bot registered with ID: " ++ show botId
     Just _ -> field { goldBotsById = Map.insert botId bot $ goldBotsById field }
 
-getBlueBots :: (BotController b, BotController g) =>
-               Field b g -> [Fryxbot b]
+getBlueBots :: (Controller b, Controller g) =>
+               Field b g -> [Bot b]
 getBlueBots field = Map.elems $ blueBotsById field
 
-getGoldBots :: (BotController b, BotController g) =>
-               Field b g -> [Fryxbot g]
+getGoldBots :: (Controller b, Controller g) =>
+               Field b g -> [Bot g]
 getGoldBots field = Map.elems $ goldBotsById field
 
-lookupBotPos :: (BotController b, BotController g) =>
+lookupBotPos :: (Controller b, Controller g) =>
                 Field b g -> Int -> Pos
 lookupBotPos field botId = case Map.lookup botId $ positionsByBot field of
   Nothing  -> error $ "No bot registered with ID: " ++ show botId
   Just pos -> pos
 
-isBlueBotAt :: (BotController b, BotController g) =>
+isBlueBotAt :: (Controller b, Controller g) =>
                Field b g -> Pos -> Bool
 isBlueBotAt field pos = case Map.lookup pos (botsByPosition field) of
   Nothing -> False
   Just botId -> Map.member botId (blueBotsById field)
 
-isGoldBotAt :: (BotController b, BotController g) =>
+isGoldBotAt :: (Controller b, Controller g) =>
                Field b g -> Pos -> Bool
 isGoldBotAt field pos = case Map.lookup pos (botsByPosition field) of
   Nothing -> False
   Just botId -> Map.member botId (goldBotsById field)
 
-isBuildingAt :: (BotController b, BotController g) =>
+isBuildingAt :: (Controller b, Controller g) =>
                 Field b g -> Pos -> Bool
 isBuildingAt field pos = Set.member pos (buildings field)
 
-isBlocked :: (BotController b, BotController g) =>
+isBlocked :: (Controller b, Controller g) =>
              Field b g -> Pos -> Bool
 isBlocked field pos = or $ map ($ pos) [isBuildingAt field, isBlueBotAt field, isGoldBotAt field]
 
-setBotPos :: (BotController b, BotController g) =>
+setBotPos :: (Controller b, Controller g) =>
              Field b g -> Int -> Pos -> Field b g
 setBotPos field botId pos =
   case Map.lookup botId (positionsByBot field) of
@@ -264,12 +263,12 @@ setBotPos field botId pos =
       , positionsByBot = Map.insert botId pos $ Map.delete botId $ positionsByBot field
       }
 
-containsPos :: (BotController b, BotController g) =>
+containsPos :: (Controller b, Controller g) =>
                Field b g -> Pos -> Bool
 containsPos field pos = posX pos >= 0 && posX pos < width field
                      && posY pos >= 0 && posY pos < height field
 
-scanHex :: (BotController b, BotController g) =>
+scanHex :: (Controller b, Controller g) =>
            Field b g -> Pos -> Sense.HexScan
 scanHex field pos =
   if (not . containsPos field) pos
@@ -281,7 +280,7 @@ scanHex field pos =
         , Sense.numFossils = fromJust $ Map.lookup pos (artifacts field)
         }
 
-cellKind :: (BotController b, BotController g) =>
+cellKind :: (Controller b, Controller g) =>
             Field b g -> Pos -> CellKind
 cellKind field pos =
   if Set.member pos (buildings field) then Building
@@ -312,7 +311,7 @@ cellKind field pos =
                           Nothing -> error $ "No gold bot with id " ++ show botId
                           Just bot -> Bot.facing bot
 
-showCell :: (BotController b, BotController g) =>
+showCell :: (Controller b, Controller g) =>
             Field b g -> Pos -> Char
 showCell field pos = case cellKind field pos of
   Building     -> '#'
@@ -325,7 +324,7 @@ showCell field pos = case cellKind field pos of
   Fossils i    -> if i > 9 then '*' else intToDigit i
   Open         -> '.'
 
-showRow :: (BotController b, BotController g) =>
+showRow :: (Controller b, Controller g) =>
            Field b g -> Int -> String
 showRow field row =
   let cols = [0..width field]
@@ -333,7 +332,7 @@ showRow field row =
       rowString = intersperse ' ' rowChars
   in if row `mod` 2 == 1 then ' ':rowString else rowString
 
-showField :: (BotController b, BotController g) =>
+showField :: (Controller b, Controller g) =>
              Field b g -> String
 showField field =
   let rows = [0..height field]

@@ -1,4 +1,4 @@
-module Team (
+module Fryxbots.Team (
   Team(..)
   ) where
 

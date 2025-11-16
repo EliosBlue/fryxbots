@@ -1,4 +1,4 @@
-module Pos
+module Fryxbots.Pos
   ( Pos(..)
   , mkPos
   ) where

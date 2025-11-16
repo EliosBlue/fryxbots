@@ -2,7 +2,6 @@
 
 module Main (main) where
 
-import           Beacon
 import           Brick
 import           Brick.BChan (newBChan, writeBChan)
 import qualified Brick.Widgets.Border as B
@@ -12,8 +11,13 @@ import           Control.Concurrent (threadDelay, forkIO)
 import           Control.Monad (forever, void)
 import           Data.Char (intToDigit)
 import           Data.Text (pack)
-import           FieldParser
-import           FryxbotWars
+import           Fryxbots.Beacon
+import           Fryxbots.Bot.Controller
+import           Fryxbots.Bot.Facing
+import           Fryxbots.Field
+import           Fryxbots.FieldParser
+import           Fryxbots.Game
+import           Fryxbots.Pos
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty.Attributes.Color as VC
 import qualified Graphics.Vty.CrossPlatform as VCP
@@ -32,7 +36,7 @@ goldController = mkRandController
 --
 --
 
-app :: (BotController b, BotController g) => App (Game b g) Tick Name
+app :: (Controller b, Controller g) => App (Game b g) Tick Name
 app = App
   { appDraw = drawUI
   , appChooseCursor = neverShowCursor
@@ -58,16 +62,16 @@ main = do
       _ <- customMain initialVty buildVty (Just chan) app game
       putStrLn "Simulation complete!"
 
-handleEvent :: (BotController b, BotController g) => BrickEvent Name Tick -> EventM Name (Game b g) ()
+handleEvent :: (Controller b, Controller g) => BrickEvent Name Tick -> EventM Name (Game b g) ()
 handleEvent (AppEvent Tick) = modify executeRound
 handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt
 handleEvent (VtyEvent (V.EvKey V.KEsc []))        = halt
 handleEvent _                                     = return ()
 
-drawUI :: (BotController b, BotController g) => Game b g -> [Widget Name]
+drawUI :: (Controller b, Controller g) => Game b g -> [Widget Name]
 drawUI game = [C.center $ drawGrid game]
 
-drawGrid :: (BotController b, BotController g) => Game b g -> Widget Name
+drawGrid :: (Controller b, Controller g) => Game b g -> Widget Name
 drawGrid game = withBorderStyle BS.unicodeBold
   $ B.borderWithLabel (str "THE FRYXELL WARS")
   $ vBox rows
@@ -79,7 +83,7 @@ drawGrid game = withBorderStyle BS.unicodeBold
       let cells = [drawCoord (mkPos col row) | col <- [0..(width.field) game - 1]]
       in if row `mod` 2 == 1 then (str " "):cells else cells
 
-    faceStr :: BotFacing -> String
+    faceStr :: Facing -> String
     faceStr facing = case facing of
                        NorthEast -> "🡽 "
                        East -> "🡺 "

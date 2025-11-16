@@ -1,20 +1,20 @@
-module BotFacing
-  ( BotFacing(..)
+module Fryxbots.Bot.Facing
+  ( Facing(..)
   , adjacent
   , rotateLeft
   , rotateRight
   ) where
 
-import Pos
+import Fryxbots.Pos
 
-data BotFacing = NorthEast
-               | East
-               | SouthEast
-               | SouthWest
-               | West
-               | NorthWest
+data Facing = NorthEast
+            | East
+            | SouthEast
+            | SouthWest
+            | West
+            | NorthWest
 
-rotateLeft :: BotFacing -> BotFacing
+rotateLeft :: Facing -> Facing
 rotateLeft facing = case facing of
   NorthEast -> NorthWest
   East -> NorthEast
@@ -23,7 +23,7 @@ rotateLeft facing = case facing of
   West -> SouthWest
   NorthWest -> West
 
-rotateRight :: BotFacing -> BotFacing
+rotateRight :: Facing -> Facing
 rotateRight facing = case facing of
   NorthEast -> East
   East -> SouthEast
@@ -32,7 +32,7 @@ rotateRight facing = case facing of
   West -> NorthWest
   NorthWest -> NorthEast
 
-adjacent :: BotFacing -> Pos -> Pos
+adjacent :: Facing -> Pos -> Pos
 adjacent facing pos = case facing of
   NorthEast -> pos { posX = (posX pos) + 1
                    , posY = (posY pos) - 1 }
