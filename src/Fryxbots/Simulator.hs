@@ -8,7 +8,10 @@ import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
 import           Control.Concurrent (threadDelay, forkIO)
+import           Control.Concurrent.STM.TVar
 import           Control.Monad (forever, void)
+import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.STM (atomically)
 import           Data.Char (intToDigit)
 import           Data.Text (pack)
 import           Fryxbots.Beacon
@@ -25,7 +28,12 @@ import qualified Graphics.Vty.CrossPlatform as VCP
 data Tick = Tick
 type Name = ()
 
-app :: (Controller b, Controller g) => App (Game b g) Tick Name
+data SimulatorState b g = SimulatorState
+  { game :: Game b g
+  , speed :: TVar Int
+  }
+
+app :: (Controller b, Controller g) => App (SimulatorState b g) Tick Name
 app = App
   { appDraw = drawUI
   , appChooseCursor = neverShowCursor
@@ -36,40 +44,65 @@ app = App
 
 runSimulator :: (Controller b, Controller g) => b -> g -> IO ()
 runSimulator blueController goldController = do
-  chan <- newBChan 10
+  chan  <- newBChan 10
+  speed <- atomically $ newTVar 100000
   _ <- forkIO $ forever $ do
     writeBChan chan Tick
-    threadDelay 100000
+    delay <- atomically $ readTVar speed
+    threadDelay delay
   fieldStr <- readFile "worlds/example1.world"
   field <- parseField $ pack fieldStr
   case field of
     Left err -> putStrLn err
     Right field -> do
-      let game = mkGame blueController goldController field
+      let simState = SimulatorState { game = mkGame blueController goldController field
+                                    , speed = speed
+                                    }
       let buildVty = VCP.mkVty V.defaultConfig
       initialVty <- buildVty
-      _ <- customMain initialVty buildVty (Just chan) app game
+      _ <- customMain initialVty buildVty (Just chan) app simState
       putStrLn "Simulation complete!"
 
-handleEvent :: (Controller b, Controller g) => BrickEvent Name Tick -> EventM Name (Game b g) ()
-handleEvent (AppEvent Tick) = modify executeRound
+handleEvent :: (Controller b, Controller g) => BrickEvent Name Tick -> EventM Name (SimulatorState b g) ()
+handleEvent (AppEvent Tick) = modify $ \st -> st { game = (executeRound . game) st }
+handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = changeSpeed SlowDown
+handleEvent (VtyEvent (V.EvKey (V.KChar '_') [])) = changeSpeed SlowDown
+handleEvent (VtyEvent (V.EvKey (V.KChar '=') [])) = changeSpeed SpeedUp
+handleEvent (VtyEvent (V.EvKey (V.KChar '+') [])) = changeSpeed SpeedUp
 handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt
 handleEvent (VtyEvent (V.EvKey V.KEsc []))        = halt
 handleEvent _                                     = return ()
 
-drawUI :: (Controller b, Controller g) => Game b g -> [Widget Name]
-drawUI game = [C.center $ drawGrid game]
+data SpeedChange = SpeedUp | SlowDown
+
+changeSpeed :: SpeedChange -> EventM Name (SimulatorState b g) ()
+changeSpeed change = do
+  simState <- get
+  curSpeed <- liftIO $ atomically $ readTVar (speed simState)
+  let newSpeed = case change of
+                   SpeedUp  -> curSpeed - 10000
+                   SlowDown -> curSpeed + 10000
+  liftIO $ atomically $ writeTVar (speed simState) newSpeed
+  return ()
+
+drawUI :: (Controller b, Controller g) => SimulatorState b g -> [Widget Name]
+drawUI simState =
+  [ vBox[ C.center $ drawGrid (game simState)
+        ,      (padLeft (Pad 3) $ str "q: quit" )
+           <+> (padLeft (Pad 3) $ str "(-/+): Change speed")
+        ]
+  ]
 
 drawGrid :: (Controller b, Controller g) => Game b g -> Widget Name
 drawGrid game = withBorderStyle BS.unicodeBold
   $ B.borderWithLabel (str "THE FRYXELL WARS")
   $ vBox rows
   where
-    rows = [hBox $ drawRow row | row <- [0..(height.field) game - 1]]
+    rows = [ hBox $ drawRow row | row <- [0..(height.field) game - 1] ]
 
     drawRow :: Int -> [Widget Name]
     drawRow row =
-      let cells = [drawCoord (mkPos col row) | col <- [0..(width.field) game - 1]]
+      let cells = [ drawCoord (mkPos col row) | col <- [0..(width.field) game - 1] ]
       in if row `mod` 2 == 1 then (str " "):cells else cells
 
     faceStr :: Facing -> String

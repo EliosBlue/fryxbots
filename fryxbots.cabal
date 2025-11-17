@@ -51,6 +51,7 @@ library
     , containers
     , megaparsec
     , random
+    , stm
     , text
     , vty
     , vty-crossplatform
@@ -72,6 +73,7 @@ executable fryxbots-exe
     , fryxbots
     , megaparsec
     , random
+    , stm
     , text
     , vty
     , vty-crossplatform

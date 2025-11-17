@@ -24,6 +24,7 @@ dependencies:
 - containers
 - megaparsec
 - random
+- stm
 - text
 - vty
 - vty-crossplatform
