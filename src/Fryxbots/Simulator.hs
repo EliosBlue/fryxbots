@@ -51,8 +51,8 @@ runSimulator blueController goldController = do
     delay <- atomically $ readTVar tickDelay
     threadDelay delay
   fieldStr <- readFile "worlds/example1.world"
-  field <- parseField $ pack fieldStr
-  case field of
+  parsedField <- parseField $ pack fieldStr
+  case parsedField of
     Left err -> putStrLn err
     Right field -> do
       let simState = SimulatorState { game = mkGame blueController goldController field
@@ -89,14 +89,14 @@ changeSpeed change = do
         else do
           let curGame = game simState
           let curJump = roundJump curGame
-          let game' = curGame { roundJump = curJump + 10 }
+          let game' = curGame { roundJump = curJump + 1 }
           modify $ \st -> st { game = game' }
     SlowDown ->
       let curJump = roundJump $ game simState
       in if curJump > 1
         then do
           let curGame = game simState
-          let newJump = max 1 $ curJump - 10
+          let newJump = max 1 $ curJump - 5
           let game' = curGame { roundJump = newJump }
           modify $ \st -> st { game = game' }
         else do
@@ -106,13 +106,13 @@ changeSpeed change = do
 
 drawUI :: (Controller b, Controller g) => SimulatorState b g -> [Widget Name]
 drawUI simState =
-  [ vBox[ C.hCenter $ drawGrid (game simState)
-        , C.hCenter $ hBox [ padLeft (Pad 3) $ str "q: Quit"
+  [ C.center $ vBox [ viewport () Vertical $ drawGrid (game simState)
+                    , vLimit 1 $ hBox [ padLeft (Pad 3) $ str "q: Quit"
                            , padLeft (Pad 3) $ str "(-/+): Change Speed"
                            , fill ' '
                            , padRight (Pad 7) $ str $ "Round: " ++ (show . roundNum . game) simState
                            ]
-        ]
+                    ]
   ]
 
 drawGrid :: (Controller b, Controller g) => Game b g -> Widget Name
