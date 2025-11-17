@@ -1,10 +1,10 @@
 module Main (main) where
 
+import Fryxbots.Example.RandomController
 import Fryxbots.Simulator
-import RandController
 
 main :: IO ()
 main =
-  let blueController = mkRandController
-      goldController = mkRandController
+  let blueController = mkRandomController
+      goldController = mkRandomController
   in runSimulator blueController goldController

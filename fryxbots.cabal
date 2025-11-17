@@ -31,6 +31,7 @@ library
       Fryxbots.Bot.Facing
       Fryxbots.Bot.Sensing
       Fryxbots.Bot.State
+      Fryxbots.Example.RandomController
       Fryxbots.Field
       Fryxbots.FieldParser
       Fryxbots.Game
@@ -58,7 +59,6 @@ library
 executable fryxbots-exe
   main-is: Main.hs
   other-modules:
-      RandController
       Paths_fryxbots
   autogen-modules:
       Paths_fryxbots
