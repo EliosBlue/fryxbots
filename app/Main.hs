@@ -7,4 +7,4 @@ main :: IO ()
 main =
   let blueController = mkRandomController
       goldController = mkRandomController
-  in runSimulator blueController goldController
+  in runSimulator "worlds/example0.world" blueController goldController

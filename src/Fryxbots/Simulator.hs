@@ -42,15 +42,15 @@ app = App
   , appAttrMap = const theMap
   }
 
-runSimulator :: (Controller b, Controller g) => b -> g -> IO ()
-runSimulator blueController goldController = do
+runSimulator :: (Controller b, Controller g) => String -> b -> g -> IO ()
+runSimulator worldFile blueController goldController = do
   chan  <- newBChan 10
   tickDelay <- atomically $ newTVar 100000
   _ <- forkIO $ forever $ do
     writeBChan chan Tick
     delay <- atomically $ readTVar tickDelay
     threadDelay delay
-  fieldStr <- readFile "worlds/example1.world"
+  fieldStr <- readFile worldFile
   parsedField <- parseField $ pack fieldStr
   case parsedField of
     Left err -> putStrLn err
