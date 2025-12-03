@@ -6,17 +6,21 @@ module Fryxbots.Field
   , Field(..)
   , addBlueBot
   , addGoldBot
+  , blueScore
   , cellKind
   , deleteBotById
   , getBlueBots
   , getFossilCount
   , getGoldBots
+  , goldScore
   , isBlocked
   , isBlueBase
   , isGoldBase
   , lookupBotPos
   , lookupBotTeam
   , mkField
+  , numBlueBots
+  , numGoldBots
   , scanHex
   , setBotPos
   , setBlueBase
@@ -104,6 +108,16 @@ setGoldBase field pos = field {
   goldBase = Set.insert pos $ goldBase field
 }
 
+blueScore :: (Controller b, Controller g) => Field b g -> Int
+blueScore field =
+  let blueFossils = map (getFossilCount field) $ Set.toList (blueBase field)
+  in sum blueFossils
+
+goldScore :: (Controller b, Controller g) => Field b g -> Int
+goldScore field =
+  let goldFossils = map (getFossilCount field) $ Set.toList (goldBase field)
+  in sum goldFossils
+
 getFossilCount :: (Controller b, Controller g) =>
               Field b g -> Pos -> Int
 getFossilCount field pos =
@@ -175,6 +189,12 @@ addGoldBot field bot pos =
       , botsByPosition = Map.insert pos botId $ botsByPosition field
       , positionsByBot = Map.insert botId pos $ positionsByBot field
       }
+
+numBlueBots :: (Controller b, Controller g) => Field b g -> Int
+numBlueBots = Map.size . blueBotsById
+
+numGoldBots :: (Controller b, Controller g) => Field b g -> Int
+numGoldBots = Map.size . goldBotsById
 
 deleteBlueBotById :: (Controller b, Controller g) =>
                       Field b g -> Int -> Field b g
@@ -288,7 +308,9 @@ scanHex field pos =
         , Sense.isBuilding = isBuildingAt field pos
         , Sense.isBase = \team -> isBase field team pos
         , Sense.hasBot = isBotAt field pos
-        , Sense.numFossils = fromJust $ Map.lookup pos (fossils field)
+        , Sense.numFossils = case Map.lookup pos (fossils field) of
+                              Nothing -> 0
+                              Just n  -> n
         }
 
 cellKind :: (Controller b, Controller g) =>
@@ -338,7 +360,7 @@ showCell field pos = case cellKind field pos of
 showRow :: (Controller b, Controller g) =>
            Field b g -> Int -> String
 showRow field row =
-  let cols = [0..width field]
+  let cols = [0..(width field) - 1]
       rowChars = map (\col -> showCell field $ mkPos col row) cols
       rowString = intersperse ' ' rowChars
   in if row `mod` 2 == 1 then ' ':rowString else rowString
@@ -346,5 +368,5 @@ showRow field row =
 showField :: (Controller b, Controller g) =>
              Field b g -> String
 showField field =
-  let rows = [0..height field]
+  let rows = [0..(height field) - 1]
   in intercalate "\n" $ map (showRow field) rows
