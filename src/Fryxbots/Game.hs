@@ -4,6 +4,7 @@
 module Fryxbots.Game
   ( Game(..)
   , executeRound
+  , gameOver
   , mkGame
   ) where
 
@@ -28,6 +29,8 @@ data Game b g where
             { field :: Field b g
             , roundNum :: Int
             , roundJump :: Int
+            , blueScore :: Int
+            , goldScore :: Int
             } -> Game b g
 
 mkGame :: (Controller b, Controller g) => b -> g -> Field b g -> Game b g
@@ -35,7 +38,14 @@ mkGame blueCont goldCont field = Game
   { field = populateBots blueCont goldCont field
   , roundNum = 0
   , roundJump = 1
+  , blueScore = 0
+  , goldScore = 0
   }
+
+gameOver :: (Controller b, Controller g) => Game b g -> Bool
+gameOver game = roundNum game > 100000
+                || Field.numBlueBots (field game) < 1
+                || Field.numGoldBots (field game) < 1
 
 botPlacements :: (Controller b, Controller g) => Field b g -> ([Pos], [Pos])
 botPlacements field = foldl addPos ([], []) allPos
@@ -65,8 +75,11 @@ executeRound game =
       curRound = roundNum game
       jump = roundJump game
       updates = iterate updateField (field game)
-  in game { field = last $ take (jump + 1) updates
+      field' = last $ take (jump + 1) updates
+  in game { field = field'
           , roundNum = curRound + jump
+          , blueScore = Field.blueScore field'
+          , goldScore = Field.goldScore field'
           }
 
 stepBlueBots :: (Controller b, Controller g) => Field b g -> Field b g
